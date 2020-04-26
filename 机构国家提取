@@ -1,0 +1,43 @@
+Private Sub 国家合作关系分析_Click()
+Dim x As Long
+Dim y As Long
+Sheet3.Cells.Clear
+
+x = Val(Sheet1.UsedRange.Rows.Count)
+y = Val(Sheet1.UsedRange.Columns.Count)
+
+'''''提取国家名称'''''
+For j = 1 To y
+    For i = 1 To x
+        If i = 1 Or j = 1 Then
+            Sheet3.Cells(i, j) = Sheet1.Cells(i, j)
+            
+        Else
+            temp = Sheet1.Cells(i, j)
+            If temp <> "" Then
+                index_last_comma = Len(temp) - Len(Application.WorksheetFunction.Substitute(temp, ",", ""))
+                replace_last_comma = Application.WorksheetFunction.Substitute(temp, ",", "@", index_last_comma)
+                index_@ = Application.WorksheetFunction.Find("@", replace_last_comma)
+                country = Right(temp, Len(temp) - index_@ - 1)
+                Sheet3.Cells(i, j) = country
+            End If
+        End If
+    Next i
+Next j
+
+
+'''''清理重复'''''
+For j = 3 To y
+    r = Val(Sheet3.UsedRange.Columns.Count)
+    For i = 2 To r
+        For k = 3 To r
+            If Sheet3.Cells(i, j) = Cells(k, j) Then
+                Sheet3.Cells(k, j).Clear
+                
+            End If
+        Next k
+    Next i
+Next j
+
+
+End Sub
