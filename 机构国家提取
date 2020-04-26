@@ -28,7 +28,7 @@ Next j
 
 '''''清理重复'''''
 For j = 3 To y
-    r = Val(Sheet3.UsedRange.Columns.Count)
+    r = Val(Sheet3.UsedRange.Rows.Count)
     For i = 2 To r
         For k = 3 To r
             If Sheet3.Cells(i, j) = Cells(k, j) Then
