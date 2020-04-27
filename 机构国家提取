@@ -166,6 +166,22 @@ For i = 3 To r
      Next
 Next
 
+''''国家发文量统计''''
 
+For i = 2 To r + 1
+    q = 0
+    Sheet5.Cells(i, 1) = Sheet3.Cells(i, 1)
+    For j = 2 To (y * 2 - 2)
+        For k = 2 To x
+            If Sheet3.Cells(i, 1) = Sheet2.Cells(k, j) Then
+                q = q + 1
+            End If
+        Next k
+    Next j
+    Sheet5.Cells(i, 2) = q
+Next i
+
+Sheet5.Cells(1, 1) = "国家"
+Sheet5.Cells(1, 2) = "发文量"
 
 End Sub
