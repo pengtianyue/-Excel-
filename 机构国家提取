@@ -1,16 +1,18 @@
-Private Sub 国家合作关系分析_Click()
+Private Sub 开始分析_Click()
 Dim x As Long
 Dim y As Long
+Sheet2.Cells.Clear
 Sheet3.Cells.Clear
-
 x = Val(Sheet1.UsedRange.Rows.Count)
 y = Val(Sheet1.UsedRange.Columns.Count)
 
-'''''提取国家名称'''''
+
+'''''提取国家名称'''''把国家名称保存到一个临时矩阵arr里
+Dim arr(1 To 999, 1 To 999)
 For j = 1 To y
     For i = 1 To x
         If i = 1 Or j = 1 Then
-            Sheet3.Cells(i, j) = Sheet1.Cells(i, j)
+            arr(i, j) = Sheet1.Cells(i, j)
             
         Else
             temp = Sheet1.Cells(i, j)
@@ -19,25 +21,134 @@ For j = 1 To y
                 replace_last_comma = Application.WorksheetFunction.Substitute(temp, ",", "@", index_last_comma)
                 index_@ = Application.WorksheetFunction.Find("@", replace_last_comma)
                 country = Right(temp, Len(temp) - index_@ - 1)
-                Sheet3.Cells(i, j) = country
+                arr(i, j) = country
             End If
         End If
     Next i
 Next j
 
 
-'''''清理重复'''''
-For j = 3 To y
-    r = Val(Sheet3.UsedRange.Rows.Count)
-    For i = 2 To r
-        For k = 3 To r
-            If Sheet3.Cells(i, j) = Cells(k, j) Then
-                Sheet3.Cells(k, j).Clear
-                
+'''''所有国家列表'''''把国家名称保存在一个临时矩阵brr里'''''''
+
+Dim brr(1 To 999, 1 To 1) '生成一个空矩阵（一列，999行）
+n = 0
+
+For i = 2 To x
+    For j = 2 To y
+        n = n + 1
+        brr(n, 1) = arr(i, j) '在一列中填入字符
+    Next
+Next
+
+If n <> 0 Then
+    Sheet3.Cells(2, 1).Resize(n, 1) = brr '把国家列表放在Sheet3，以后要用
+End If
+
+Sheet3.Range("A1:A" & n).RemoveDuplicates Columns:=1, Header:=xlYes '删除重复项
+r = Val(Sheet3.UsedRange.Rows.Count)
+
+For i = 2 To r + 1
+    If Sheet3.Cells(i, 1) = "" Then
+        Sheet3.Range("A" & i).Delete Shift:=xlUp '清除空白格，并把下面的单元格往上移
+    End If
+Next
+
+''''''''''''统计各国参与研究的机构数量'''''''''把数量保存在一个临时矩阵crr里'''''
+Dim crr(1 To 999, 1 To 999)
+r = Val(Sheet3.UsedRange.Rows.Count)
+
+For j = 2 To y
+    For k = 2 To r
+        m = 0
+        For i = 2 To x
+            If Sheet3.Cells(k, 1) = arr(i, j) Then
+                m = m + 1
             End If
-        Next k
-    Next i
-Next j
+            crr(k, j) = m
+        Next
+    Next
+Next
+
+''''梳理每项研究参与的国家''''
+For j = 2 To y
+    Sheet2.Cells(1, j * 2 - 2) = Sheet1.Cells(1, j) '抄表头，两个项目之间空一列
+    m = 2
+    For i = 2 To r
+        If crr(i, j) <> 0 Then
+            Sheet2.Cells(m, j * 2 - 2) = Sheet3.Cells(i, 1)
+            Sheet2.Cells(m, j * 2 - 1) = crr(i, j)
+            m = m + 1
+        End If
+    Next
+Next
+
+
+'''''转置国家-项目列表'''''
+Dim drr(1 To 999, 1 To 999)
+For j = 1 To y
+    For i = 1 To x
+        drr(j, i) = Sheet2.Cells(i, 2 * j)
+    Next
+Next
+
+'''''生成邻接关系矩阵'''''
+For i = 1 To r
+    Sheet3.Cells(1, i) = Sheet3.Cells(i, 1)
+Next
+
+Dim dic
+Set dic = CreateObject("Scripting.Dictionary")
+
+For i = 1 To r
+    dic(Sheet3.Cells(i + 1, 1) & "") = i
+Next
+
+'''''''''''''''''''
+Dim a
+
+Dim b()
+ReDim b(1 To r, 1 To r)
+
+For i = 2 To y
+    For j = 2 To y
+
+        If dic.exists(drr(i, j) & "") Then
+           temp = dic(drr(i, j) & "")
+           b(temp, temp) = b(temp, temp) + 1
+        End If
+
+
+    Next
+    '''''''''''''
+    For j1 = 2 To y
+
+        If dic.exists(drr(i, j1) & "") Then
+        temp1 = dic(drr(i, j1) & "")
+            For j2 = j1 + 1 To 100
+
+                    If dic.exists(drr(i, j2) & "") Then
+                       temp2 = dic(drr(i, j2) & "")
+                       b(temp1, temp2) = b(temp1, temp2) + 1
+                       b(temp2, temp1) = b(temp2, temp1) + 1
+                    End If
+
+            Next
+        End If
+
+    Next
+Next
+
+
+Sheet3.Cells(2, 2).Resize(r, r) = b
+
+For i = 2 To y
+    For j = 2 To y
+        If i = j Then
+            Sheet3.Cells(i, j).Value = "-"
+        End If
+    Next
+Next        
+        
 
 
 End Sub
