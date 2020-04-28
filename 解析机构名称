@@ -1,0 +1,99 @@
+Sub 第一步_Click()
+Dim x As Long
+Dim y As Long
+Sheet2.Cells.Clear
+Sheet3.Cells.Clear
+Sheet4.Cells.Clear
+Sheet5.Cells.Clear
+x = Val(Sheet1.UsedRange.Rows.Count)
+y = Val(Sheet1.UsedRange.Columns.Count)
+
+'''''解析机构名称和国家'''''''
+Sheet2.Cells(1, 1) = Sheet1.Cells(1, 1)
+Sheet2.Cells(2, 1) = "研究机构及国家"
+For j = 2 To y
+    Sheet2.Cells(1, j * 2 - 2) = Sheet1.Cells(1, j) '抄表头，两个项目之间空一列
+    For i = 2 To x
+        temp = Sheet1.Cells(i, j)
+        '''''提取国家，放在奇数列''''''
+        If temp <> "" Then
+            index_last_comma = Len(temp) - Len(Application.WorksheetFunction.Substitute(temp, ",", ""))
+            replace_last_comma = Application.WorksheetFunction.Substitute(temp, ",", "@", index_last_comma)
+            index_@ = Application.WorksheetFunction.Find("@", replace_last_comma)
+            country = Right(temp, Len(temp) - index_@ - 1)
+            If country = "Hong Kong" Or country = "Taiwan" Or country = "Macau" Then
+                country = "China-" & country
+            End If
+                
+            Sheet2.Cells(i, j * 2 - 1) = country
+        End If
+    Next
+Next
+
+For j = 2 To y
+    n = 1
+    For i = 2 To x
+        temp = Sheet1.Cells(i, j)
+        If temp <> "" Then
+         '''''找所有逗号的位置并保存在一个array里''''
+            Dim comma_indicies(1 To 10)
+            n_comma = Len(temp) - Len(Application.WorksheetFunction.Substitute(temp, ",", ""))
+            For p = 1 To n_comma
+                replace_one_comma = Application.WorksheetFunction.Substitute(temp, ",", "@", p)
+                comma_indicies(p) = InStr(replace_one_comma, "@")
+            Next
+
+            '''找关键词所在位置'''''
+            If InStr(temp, "Universi") <> 0 Then
+                key_index = InStr(temp, "Universi")
+            ElseIf InStr(temp, "Museum") <> 0 Then
+                key_index = InStr(temp, "Museum")
+            ElseIf InStr(temp, "Ministry") <> 0 Then
+                key_index = InStr(temp, "Ministry")
+            ElseIf InStr(temp, "Institut") <> 0 Then
+                key_index = InStr(temp, "Institut")
+            ElseIf InStr(temp, "Administ") <> 0 Then
+                key_index = InStr(temp, "Administ")
+            ElseIf InStr(temp, "Associat") <> 0 Then
+                key_index = InStr(temp, "Associat")
+            ElseIf InStr(temp, "Agency") <> 0 Then
+                key_index = InStr(temp, "Agency")
+            ElseIf InStr(temp, "Corporation") <> 0 Then
+                key_index = InStr(temp, "Corporation")
+            ElseIf InStr(temp, "Ltd") <> 0 Then
+                key_index = InStr(temp, "Ltd")
+            ElseIf InStr(temp, "Inc") <> 0 Then
+                key_index = InStr(temp, "Inc")
+            ElseIf InStr(temp, "Centre") <> 0 Then
+                key_index = InStr(temp, "Centre")
+            ElseIf InStr(temp, "Center") <> 0 Then
+                key_index = InStr(temp, "Center")
+            ElseIf InStr(temp, "Labo") <> 0 Then
+                key_index = InStr(temp, "Labo")
+            ElseIf InStr(temp, "Consult") <> 0 Then
+                key_index = InStr(temp, "Consult")
+            Else
+                key_index = 0
+            End If
+            
+            For p = 1 To n_comma - 1
+                If key_index > comma_indicies(p) And key_index < comma_indicies(p + 1) Then
+                    Affiliation = Mid(temp, comma_indicies(p) + 2, comma_indicies(p + 1) - comma_indicies(p) - 2)
+                    Sheet2.Cells(i, j * 2 - 2) = Affiliation
+                ElseIf key_index < comma_indicies(1) And key_index <> 0 Then
+                    Affiliation = Trim(Left(temp, comma_indicies(1) - 1))
+                    Sheet2.Cells(i, j * 2 - 2) = Affiliation
+                                        
+                End If
+            Next
+        End If
+        
+        If Sheet2.Cells(i, j * 2 - 2) = "" And Sheet2.Cells(i, j * 2 - 1) <> "" Then
+            Sheet2.Cells(i, j * 2 - 2) = "无法解析机构名称，请在此手动输入"
+        End If
+    Next
+Next
+           
+      
+
+End Sub
