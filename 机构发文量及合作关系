@@ -1,0 +1,196 @@
+Sub 机构合作发文分析()
+Sheet3.Cells.Clear
+x = Val(Sheet1.UsedRange.Rows.Count)
+y = Val(Sheet1.UsedRange.Columns.Count)
+
+'''弹出选项，Yes=6, No=7''''
+Response = MsgBox("是否忽略未解析单元格？(选是会自动清除无法解析机构)", vbYesNo)
+err = 0
+For i = 1 To x
+    For j = 1 To y
+        If InStr(Sheet2.Cells(i, j), "无法解析") <> 0 Then
+            err = 1
+        End If
+    Next
+Next
+
+If Response = 7 And err = 1 Then
+    MsgBox "请在对应单元格内手动输入无法解析的机构名称后再进行分析"
+Else
+
+
+''''节点表''统计各机构的发文量''
+Dim arr(1 To 999, 1 To 999) '空矩阵arr留着对后面单项研究清理重复项用，先生成一个框架
+Dim brr(1 To 999, 1 To 2) '生成一个空矩阵（一列999行）
+n = 1
+For i = 2 To x
+    For j = 2 To y
+        If Sheet2.Cells(i, j * 2 - 2) <> "" And InStr(Sheet2.Cells(i, 2 * j - 2), "无法解析") = 0 Then
+            n = n + 1
+            brr(n, 1) = Sheet2.Cells(i, j * 2 - 2)
+            brr(n, 2) = Sheet2.Cells(i, j * 2 - 1)
+            arr(1, j) = Sheet1.Cells(1, j) 'arr的表头和sheet1一样，两列之间不空格
+        End If
+    Next
+Next
+
+    
+For i = 1 To n
+    Sheet3.Cells(i, 1) = brr(i, 1)
+    Sheet3.Cells(i, 2) = brr(i, 2)
+Next
+
+Sheet3.Range("A1:B" & n).RemoveDuplicates Columns:=1, Header:=xlNo '删除重复项
+For i = 2 To n
+    If Sheet3.Cells(i, 1) = "" Then
+        Sheet3.Range("A" & i, "B" & i).Delete Shift:=xlUp '清除空白格，并把下面的单元格往上移
+    End If
+Next
+
+
+For i = 2 To n
+    If Sheet3.Cells(i, 1) <> "" Then
+        af = Sheet3.Cells(i, 1)
+        ct = 0
+
+        For k = 2 To y
+
+            res = False
+            For j = 2 To x
+                If Sheet2.Cells(j, k * 2 - 2) = af Then
+                    res = True   '在k列中的任意一行找到了该机构，则res计为TRUE
+                End If
+            Next
+            
+            If res = True Then
+                ct = ct + 1 '如果res为TRUE则发文量+1
+            End If
+        Next
+        Sheet3.Cells(i, 3) = ct
+        Sheet3.Cells(i, 4) = Sheet3.Cells(i, 1) & " (" & Sheet3.Cells(i, 2) & ")"
+
+    End If
+
+Next
+Sheet3.Cells(1, 1) = "Id"
+Sheet3.Cells(1, 2) = "Country"
+Sheet3.Cells(1, 3) = "Weight"
+Sheet3.Cells(1, 4) = "Label"
+
+For j = 2 To y
+    at = 1
+    For k = 2 To n
+        res = False
+        If Sheet3.Cells(k, 1) <> "" Then
+            For i = 2 To x
+                If Sheet3.Cells(k, 1) = Sheet2.Cells(i, j * 2 - 2) Then
+                    res = True
+                End If
+            Next i
+        End If
+                        
+        If res = True Then
+            at = at + 1
+            arr(at, j) = Sheet3.Cells(k, 1)
+        End If
+
+    Next k
+Next j
+                
+
+
+'''转置arr'''使其变成crr
+Dim crr(1 To 999, 1 To 999)
+For i = 1 To x
+    For j = 1 To y
+        crr(j, i) = arr(i, j)
+    Next
+Next
+'
+'Sheet4.Cells(1, 1).Resize(n, n) = crr
+''
+'''''生成邻接关系矩阵'''''
+
+For i = 1 To n
+    Sheet4.Cells(i, 1) = Sheet3.Cells(i, 1)
+    Sheet4.Cells(1, i) = Sheet4.Cells(i, 1)
+Next
+
+Dim dic
+Set dic = CreateObject("Scripting.Dictionary")
+
+For i = 1 To n
+    dic(Sheet4.Cells(i + 1, 1) & "") = i
+Next
+
+'''''''''''''''''''
+Sheet4.Cells(1, 1) = "机构间合作次数"
+Dim b()
+ReDim b(1 To n, 1 To n)
+
+For i = 2 To y
+    For j = 2 To y
+
+        If dic.exists(crr(i, j) & "") Then
+           temp = dic(crr(i, j) & "")
+           b(temp, temp) = b(temp, temp) + 1
+        End If
+
+
+    Next
+    '''''''''''''
+    For j1 = 2 To y
+
+        If dic.exists(crr(i, j1) & "") Then
+        temp1 = dic(crr(i, j1) & "")
+            For j2 = j1 + 1 To 100
+
+                    If dic.exists(crr(i, j2) & "") Then
+                       temp2 = dic(crr(i, j2) & "")
+                       b(temp1, temp2) = b(temp1, temp2) + 1
+                       b(temp2, temp1) = b(temp2, temp1) + 1
+                    End If
+
+            Next
+        End If
+
+    Next
+Next
+
+
+Sheet4.Cells(2, 2).Resize(n, n) = b
+
+For i = 2 To y
+    For j = 2 To y
+        If i = j Then
+            Sheet4.Cells(i, j).Value = "-"
+        End If
+    Next
+Next
+
+
+Sheet5.Cells(1, 1) = "Source"
+Sheet5.Cells(1, 2) = "Target"
+Sheet5.Cells(1, 3) = "Weight"
+Sheet5.Cells(1, 4) = "Type"
+Sheet5.Cells(1, 6) = "说明：直接将第1-4列复制到gephi所需表格中，表头为Gephi要求的命名，其中Weight代表合作发文量，Type这一列为作图所需"
+
+q = 2
+For i = 3 To n + 1
+    For j = 2 To n + 1
+        If i > j And Sheet4.Cells(i, j) <> "" Then
+            Sheet5.Cells(q, 1) = Sheet4.Cells(1, j)
+            Sheet5.Cells(q, 2) = Sheet4.Cells(i, 1)
+            Sheet5.Cells(q, 3) = Sheet4.Cells(i, j)
+            Sheet5.Cells(q, 4) = "Undirected"
+            q = q + 1
+        End If
+     Next
+Next
+
+
+
+End If
+
+
+End Sub
